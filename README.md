@@ -1,111 +1,32 @@
-# IBM DataStage + Db2 ETL Lab
+# DataStage Sequence Failure and the Reject Link
 
-**Author:** [Faiz Elahi](https://github.com/faizilahi) (`faizilahi`) · **Type:** EDUCATIONAL LAB · **Synthetic data only**
+[Faiz Elahi](https://www.linkedin.com/in/faizilahi) — [pendataco.com](https://pendataco.com) — [github.com/faizilahi](https://github.com/faizilahi)
 
----
+Synthetic data only. No vendor-customer employment claim.
 
-## Educational disclaimer
+Job sequence `seq_customer_daily` failed on the DB2 upsert after the transform
+stage passed **12** rows down the reject link (null `customer_sk`, bad phone).
+Ops reran without clearing rejects and double-loaded **3** previously good rows.
 
-This is an **educational portfolio lab**. Datasets are **synthetic**. It does **not** claim employment at a customer, hospital, bank, SAP shop, or Oracle estate. No real PHI/PII. No live cloud spend. No API keys required.
+## Job sequence
 
----
+`jobs/seq_customer_daily.json` orders: extract → transform → reject_capture →
+db2_upsert → control_total. The simulator in `src/sequence_runner.py` stops the
+sequence when reject count exceeds threshold **10** unless `FORCE_CONTINUE=1`.
 
-## Problem statement
+## Reject rows
 
-Estates still run DataStage jobs into Db2. This lab teaches job stages (extract/transform/load), reject links, and Db2-minded SQL — distinct from the watsonx analytics lab.
+Reject link schema: `source_row_id`, `reject_code`, `payload_json`. Planted
+rejects: **8** `NULL_SK`, **4** `BAD_PHONE`. They land in `rejects/customer_rejects.csv`.
 
-**Domain focus:** Enterprise ETL modernization
+## The rerun
 
----
-
-## Why this tool (IBM DataStage-style jobs + Db2 SQL patterns)
-
-| Opaque DSX jobs | Explicit stage graph in code |
-|---|---|
-| Lost rejects | Reject CSV with reasons |
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-  GEN[generate_synthetic_data.py]
-  DATA[data/*.csv]
-  RUN[run_lab.py]
-  OUT[output/*.csv]
-  CHART[generate_charts.py]
-  IMG[docs/images/*.png]
-  GEN --> DATA --> RUN --> OUT
-  OUT --> CHART --> IMG
-```
-
-See [`docs/architecture.md`](docs/architecture.md).
-
----
-
-## Dataset dictionary
-
-| File | Notes |
-|------|-------|
-| `data/source_customers.csv` | Extract |
-| `output/rejects.csv` | Reject link |
-| `output/summary.csv` | Load counts |
-
----
-
-## Prerequisites
-
-- Python 3.10+
-- Packages in `requirements.txt`
-
----
-
-## How to run
+Correct rerun: quarantine rejects, replay only clean ids, assert target count
+matches control. Bad rerun replayed the full extract and inflated DB2 by **3**.
+Worked clean target count **4,988**; bad rerun count **4,991**.
 
 ```powershell
-cd "ibm-datastage-+-db2-etl-lab"
-python -m venv .venv
-.\\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 python scripts/generate_synthetic_data.py
-python src/run_lab.py
-python scripts/generate_charts.py
+python src/run_sequence.py
 ```
-
-Inspect `output/summary.csv` and `docs/images/primary_metric.png`.
-
----
-
-## Local vs cloud (honest)
-
-Python stages stand in for DataStage; **SQLite** stands in for Db2. Not IBM Cloud or watsonx. See also `ibm-watsonx-analytics-lab` for analytics patterns.
-
----
-
-## Results interpretation
-
-Open `output/` CSVs and the PNGs under `docs/images/`. Numbers are synthetic teaching fixtures — use them to explain grain, filters, and control totals, not as real business KPIs.
-
----
-
-## Limitations
-
-- Stand-in engines (DuckDB/SQLite/pandas) replace paid MPP/warehouses where noted.
-- Simplified schemas vs production SAP/Oracle/Hive estates.
-- Charts are matplotlib teaching visuals, not vendor BI embeds.
-
----
-
-## Exercises
-
-1. Add a slowly-changing lookup stage.
-2. Partition the load by region.
-3. Write a DataStage→dbt dual-run checklist.
-
----
-
-## License / attribution
-
-Educational portfolio content by Faiz Elahi. Synthetic data for teaching only.
-

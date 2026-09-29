@@ -1,0 +1,12 @@
+{
+  "sequence": "seq_customer_daily",
+  "stages": [
+    {"name": "extract_src", "type": "Db2Connector"},
+    {"name": "xfm_customer", "type": "Transformer"},
+    {"name": "reject_capture", "type": "SequentialFile"},
+    {"name": "db2_upsert", "type": "Db2Connector"},
+    {"name": "control_total", "type": "Aggregator"}
+  ],
+  "reject_threshold": 10,
+  "target_table": "DW.CUSTOMER_DAILY"
+}

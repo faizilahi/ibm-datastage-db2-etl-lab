@@ -1,13 +1,31 @@
-import numpy as np, pandas as pd
+from __future__ import annotations
 from pathlib import Path
-RNG=np.random.default_rng(13)
-ROOT=Path(__file__).resolve().parents[1]
-DATA=ROOT/"data"; DATA.mkdir(parents=True, exist_ok=True)
-rows=[]
-for i in range(1,251):
-  email = f"user{i}@example.com" if RNG.random()>0.08 else ""
-  rows.append({"customer_id":i,"name":f"Cust {i}","email":email,"region":RNG.choice(["NAM","EU","APAC"]),
-    "balance":round(float(RNG.uniform(-50,5000)),2)})
-pd.DataFrame(rows).to_csv(DATA/"source_customers.csv",index=False)
-print("Wrote DataStage source")
+import numpy as np
+import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[1]
+DATA = ROOT / "data"
+DATA.mkdir(parents=True, exist_ok=True)
+RNG = np.random.default_rng(2201)
+
+def main():
+    rows = []
+    for i in range(5000):
+        rows.append({
+            "source_row_id": i + 1,
+            "customer_sk": 100000 + i,
+            "customer_name": f"Cust {i}",
+            "phone": f"555-{1000 + (i % 9000):04d}",
+            "country": RNG.choice(["US", "CA", "GB"]),
+        })
+    df = pd.DataFrame(rows)
+    # Plant 8 NULL_SK and 4 BAD_PHONE
+    for i in range(8):
+        df.at[i, "customer_sk"] = None
+    for i in range(8, 12):
+        df.at[i, "phone"] = "NOT-A-PHONE"
+    df.to_csv(DATA / "src_customer.csv", index=False)
+    print("source rows", len(df))
+
+if __name__ == "__main__":
+    main()
